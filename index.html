@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Crear Evento en Google Calendar</title>
+</head>
+<body>
+  <h1>Crear Evento en Google Calendar</h1>
+
+  <button onclick="handleAuthClick()">Conectar con Google</button>
+
+  <form id="formEvento" onsubmit="crearEvento(event)">
+    <p>
+      <label>Título del evento:</label><br>
+      <input type="text" id="titulo" required>
+    </p>
+    <p>
+      <label>Descripción:</label><br>
+      <textarea id="descripcion"></textarea>
+    </p>
+    <p>
+      <label>Fecha:</label><br>
+      <input type="date" id="fecha" required>
+    </p>
+    <p>
+      <label>Hora inicio:</label><br>
+      <input type="time" id="horaInicio" required>
+    </p>
+    <p>
+      <label>Hora fin:</label><br>
+      <input type="time" id="horaFin" required>
+    </p>
+    <button type="submit">Crear evento</button>
+  </form>
+
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script>
+    const CLIENT_ID = '899126592081-gl8hagtukmqpfg4quqd01thseiqk7lbb.apps.googleusercontent.com';
+    const SCOPES = 'https://www.googleapis.com/auth/calendar.events';
+
+    function handleAuthClick() {
+      gapi.load('client:auth2', () => {
+        gapi.client.init({
+          clientId: CLIENT_ID,
+          scope: SCOPES
+        }).then(() => {
+          return gapi.auth2.getAuthInstance().signIn();
+        }).then(() => {
+          alert("✅ Conectado con Google correctamente");
+        }).catch(err => {
+          console.error("❌ Error al conectar", err);
+        });
+      });
+    }
+
+    function crearEvento(e) {
+      e.preventDefault(); // Evitar recarga
+
+      const titulo = document.getElementById('titulo').value;
+      const descripcion = document.getElementById('descripcion').value;
+      const fecha = document.getElementById('fecha').value;
+      const horaInicio = document.getElementById('horaInicio').value;
+      const horaFin = document.getElementById('horaFin').value;
+
+      const startDateTime = `${fecha}T${horaInicio}:00`;
+      const endDateTime = `${fecha}T${horaFin}:00`;
+
+      const event = {
+        summary: titulo,
+        description: descripcion,
+        start: {
+          dateTime: startDateTime,
+          timeZone: 'America/Bogota'
+        },
+        end: {
+          dateTime: endDateTime,
+          timeZone: 'America/Bogota'
+        }
+      };
+
+      gapi.client.calendar.events.insert({
+        calendarId: 'primary',
+        resource: event
+      }).then(response => {
+        alert("✅ Evento creado en tu calendario");
+        window.open(response.result.htmlLink, "_blank");
+      }).catch(error => {
+        alert("❌ Error al crear el evento. ¿Te logueaste con Google?");
+        console.error(error);
+      });
+    }
+  </script>
+</body>
+</html>
