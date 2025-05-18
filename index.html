@@ -1,0 +1,461 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear Evento en Google Calendar</title>
+    <style>
+        :root {
+            --primary-color: #4285f4;
+            --hover-color: #3367d6;
+            --success-color: #34a853;
+            --error-color: #ea4335;
+            --light-gray: #f5f5f5;
+            --dark-gray: #444;
+            --border-radius: 8px;
+            --shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+        
+        body {
+            background-color: #fafafa;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: var(--primary-color);
+            text-align: center;
+            margin: 20px 0;
+            font-weight: 500;
+        }
+        
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+        }
+        
+        .auth-container {
+            text-align: center;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 15px 0;
+            font-size: 14px;
+        }
+        
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            background-color: #ccc;
+        }
+        
+        .status-dot.connected {
+            background-color: var(--success-color);
+        }
+        
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+            display: inline-block;
+            width: auto;
+        }
+        
+        button:hover {
+            background-color: var(--hover-color);
+        }
+        
+        button[type="submit"] {
+            width: 100%;
+            margin-top: 15px;
+        }
+        
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        label {
+            font-weight: 500;
+            margin-bottom: 5px;
+            display: block;
+            color: var(--dark-gray);
+        }
+        
+        input, textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: border 0.2s;
+        }
+        
+        input:focus, textarea:focus {
+            border-color: var(--primary-color);
+            outline: none;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .notification {
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        
+        .notification.success {
+            background-color: rgba(52, 168, 83, 0.15);
+            color: var(--success-color);
+            border: 1px solid var(--success-color);
+        }
+        
+        .notification.error {
+            background-color: rgba(234, 67, 53, 0.15);
+            color: var(--error-color);
+            border: 1px solid var(--error-color);
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 10px 0;
+        }
+        
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        #google-signin-button {
+            display: flex;
+            justify-content: center;
+            margin: 10px 0;
+        }
+        
+        .event-form {
+            display: none;
+        }
+    </style>
+    <!-- Cargar la nueva biblioteca Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- Cargar la API de Google para Calendar -->
+    <script src="https://apis.google.com/js/api.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Crear Evento en Google Calendar</h1>
+        
+        <div class="notification success" id="successNotification">
+            ✅ Operación completada con éxito
+        </div>
+        
+        <div class="notification error" id="errorNotification">
+            ❌ Ha ocurrido un error
+        </div>
+        
+        <div class="auth-container">
+            <div class="status-indicator">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">No conectado</span>
+            </div>
+            
+            <!-- Contenedor para el botón de inicio de sesión de Google -->
+            <div id="google-signin-button"></div>
+            
+            <div class="loading" id="loadingAuth">
+                <div class="loading-spinner"></div>
+                <span>Conectando...</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container event-form" id="eventContainer">
+        <form id="formEvento" onsubmit="crearEvento(event)">
+            <div>
+                <label for="titulo">Título del evento:</label>
+                <input type="text" id="titulo" required>
+            </div>
+            
+            <div>
+                <label for="descripcion">Descripción:</label>
+                <textarea id="descripcion"></textarea>
+            </div>
+            
+            <div>
+                <label for="fecha">Fecha:</label>
+                <input type="date" id="fecha" required>
+            </div>
+            
+            <div>
+                <label for="horaInicio">Hora inicio:</label>
+                <input type="time" id="horaInicio" required>
+            </div>
+            
+            <div>
+                <label for="horaFin">Hora fin:</label>
+                <input type="time" id="horaFin" required>
+            </div>
+            
+            <div class="loading" id="loadingEvent">
+                <div class="loading-spinner"></div>
+                <span>Creando evento...</span>
+            </div>
+            
+            <button type="submit">Crear evento</button>
+        </form>
+    </div>
+    
+    <script>
+        // Variables globales
+        const CLIENT_ID = '899126592081-gl8hagtukmqpfg4quqd01thseiqk7lbb.apps.googleusercontent.com';
+        const API_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
+        
+        let tokenClient;
+        let accessToken = '';
+        let isAuthenticated = false;
+        
+        // Elementos DOM
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const eventContainer = document.getElementById('eventContainer');
+        const successNotification = document.getElementById('successNotification');
+        const errorNotification = document.getElementById('errorNotification');
+        const loadingAuth = document.getElementById('loadingAuth');
+        const loadingEvent = document.getElementById('loadingEvent');
+        
+        // Inicializar fecha actual en el formulario
+        window.onload = function() {
+            // Inicializar el cliente de Google
+            initializeGoogleClient();
+            
+            // Configurar fechas predeterminadas
+            const today = new Date();
+            const formattedDate = today.toISOString().split('T')[0];
+            document.getElementById('fecha').value = formattedDate;
+            
+            // Formatear hora actual para hora inicio (redondear a próxima hora)
+            let nextHour = new Date();
+            nextHour.setHours(nextHour.getHours() + 1);
+            nextHour.setMinutes(0);
+            const startTime = nextHour.toTimeString().substring(0, 5);
+            document.getElementById('horaInicio').value = startTime;
+            
+            // Formatear hora fin (1 hora después del inicio)
+            let endHour = new Date(nextHour);
+            endHour.setHours(endHour.getHours() + 1);
+            const endTime = endHour.toTimeString().substring(0, 5);
+            document.getElementById('horaFin').value = endTime;
+        };
+        
+        // Inicializar el cliente de Google
+        function initializeGoogleClient() {
+            // Inicializar tokenClient para la nueva API de Google
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID,
+                scope: API_SCOPE,
+                callback: handleTokenResponse
+            });
+            
+            // Cargar la API de Calendar
+            gapi.load('client', async () => {
+                try {
+                    // Inicializar la biblioteca de cliente con la API de Calendar
+                    await gapi.client.init({
+                        discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest']
+                    });
+                    console.log('✅ API de Google Calendar cargada correctamente');
+                } catch (error) {
+                    console.error('❌ Error al cargar la API de Calendar', error);
+                }
+                
+                // Renderizar el botón de inicio de sesión de Google
+                google.accounts.id.initialize({
+                    client_id: CLIENT_ID,
+                    callback: handleCredentialResponse
+                });
+                
+                google.accounts.id.renderButton(
+                    document.getElementById('google-signin-button'),
+                    { 
+                        theme: 'outline', 
+                        size: 'large',
+                        text: 'signin_with',
+                        logo_alignment: 'center'
+                    }
+                );
+            });
+        }
+        
+        // Manejar la respuesta de credenciales de Google Identity Services
+        function handleCredentialResponse(response) {
+            // Este callback se llama cuando el usuario hace clic en el botón de Google
+            // Solicitar token de acceso
+            tokenClient.requestAccessToken();
+        }
+        
+        // Manejar la respuesta del token de acceso
+        function handleTokenResponse(tokenResponse) {
+            if (tokenResponse && tokenResponse.access_token) {
+                accessToken = tokenResponse.access_token;
+                isAuthenticated = true;
+                updateSigninStatus(true);
+            } else {
+                console.error('❌ No se recibió un token de acceso válido');
+                updateSigninStatus(false);
+            }
+        }
+        
+        // Función para mostrar notificaciones
+        function showNotification(type, message) {
+            const notification = type === 'success' ? successNotification : errorNotification;
+            notification.textContent = message;
+            notification.style.display = 'block';
+            
+            // Ocultar después de 5 segundos
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 5000);
+        }
+        
+        // Actualizar la interfaz según el estado de autenticación
+        function updateSigninStatus(isSignedIn) {
+            loadingAuth.style.display = 'none';
+            
+            if (isSignedIn) {
+                statusDot.classList.add('connected');
+                statusText.textContent = 'Conectado con Google';
+                eventContainer.style.display = 'block';
+                showNotification('success', '✅ Conectado con Google Calendar correctamente');
+            } else {
+                statusDot.classList.remove('connected');
+                statusText.textContent = 'No conectado';
+                eventContainer.style.display = 'none';
+            }
+        }
+        
+        // Función para crear un evento
+        function crearEvento(e) {
+            e.preventDefault();
+            
+            if (!isAuthenticated) {
+                showNotification('error', '❌ Debes conectarte con Google primero');
+                return;
+            }
+            
+            loadingEvent.style.display = 'block';
+            
+            const titulo = document.getElementById('titulo').value;
+            const descripcion = document.getElementById('descripcion').value;
+            const fecha = document.getElementById('fecha').value;
+            const horaInicio = document.getElementById('horaInicio').value;
+            const horaFin = document.getElementById('horaFin').value;
+            
+            // Validar que la hora fin sea posterior a la hora inicio
+            const startDateTime = new Date(`${fecha}T${horaInicio}`);
+            const endDateTime = new Date(`${fecha}T${horaFin}`);
+            
+            if (endDateTime <= startDateTime) {
+                loadingEvent.style.display = 'none';
+                showNotification('error', '❌ La hora de finalización debe ser posterior a la hora de inicio');
+                return;
+            }
+            
+            // Formatear fechas para la API de Google
+            const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Bogota';
+            
+            const event = {
+                summary: titulo,
+                description: descripcion,
+                start: {
+                    dateTime: `${fecha}T${horaInicio}:00`,
+                    timeZone: timeZone
+                },
+                end: {
+                    dateTime: `${fecha}T${horaFin}:00`,
+                    timeZone: timeZone
+                }
+            };
+            
+            // Crear el evento en Google Calendar usando fetch con el token
+            fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + accessToken,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(event)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => { throw err; });
+                }
+                return response.json();
+            })
+            .then(data => {
+                loadingEvent.style.display = 'none';
+                showNotification('success', '✅ Evento creado en tu calendario correctamente');
+                
+                // Limpiar formulario
+                document.getElementById('titulo').value = '';
+                document.getElementById('descripcion').value = '';
+                
+                // Abrir el evento en otra pestaña
+                if (data.htmlLink) {
+                    window.open(data.htmlLink, "_blank");
+                }
+            })
+            .catch(error => {
+                loadingEvent.style.display = 'none';
+                const errorMsg = error.error ? error.error.message : 'Error de conexión';
+                showNotification('error', '❌ Error al crear el evento: ' + errorMsg);
+                console.error("Error al crear evento", error);
+            });
+        }
+    </script>
+</body>
+</html>
