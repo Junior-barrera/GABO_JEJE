@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Crear Evento en Google Calendar</title>
+</head>
+<body>
+
+  <h2>Crear evento en Google Calendar</h2>
+
+  <label>Título del evento:</label><br>
+  <input type="text" id="titulo" placeholder="Ej: Reunión de trabajo"><br><br>
+
+  <label>Descripción:</label><br>
+  <textarea id="descripcion" placeholder="Ej: Revisar el proyecto X"></textarea><br><br>
+
+  <label>Ubicación:</label><br>
+  <input type="text" id="ubicacion" placeholder="Ej: Oficina principal"><br><br>
+
+  <label>Fecha:</label><br>
+  <input type="date" id="fecha"><br><br>
+
+  <label>Hora de inicio:</label><br>
+  <input type="time" id="horaInicio"><br><br>
+
+  <label>Hora de fin:</label><br>
+  <input type="time" id="horaFin"><br><br>
+
+  <button onclick="crearEvento()">Crear evento en Google Calendar</button>
+
+  <script>
+    function crearEvento() {
+      const titulo = encodeURIComponent(document.getElementById('titulo').value);
+      const descripcion = encodeURIComponent(document.getElementById('descripcion').value);
+      const ubicacion = encodeURIComponent(document.getElementById('ubicacion').value);
+      const fecha = document.getElementById('fecha').value;
+      const horaInicio = document.getElementById('horaInicio').value;
+      const horaFin = document.getElementById('horaFin').value;
+
+      if (!fecha || !horaInicio || !horaFin || !titulo) {
+        alert("Por favor, completa al menos el título, la fecha y las horas.");
+        return;
+      }
+
+      // Formato: AAAAMMDDTHHMMSSZ (asumimos hora local y la pasamos como UTC simple)
+      const inicio = fecha.replace(/-/g, '') + 'T' + horaInicio.replace(':', '') + '00Z';
+      const fin = fecha.replace(/-/g, '') + 'T' + horaFin.replace(':', '') + '00Z';
+
+      const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${titulo}&dates=${inicio}/${fin}&details=${descripcion}&location=${ubicacion}`;
+
+      window.open(url, '_blank');
+    }
+  </script>
+
+</body>
+</html>
